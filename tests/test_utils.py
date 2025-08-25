@@ -3,7 +3,7 @@ import filecmp
 import os
 import tarfile
 import zipfile
-from collections import deque
+from collections import OrderedDict, deque
 from io import BytesIO
 from unittest import mock
 
@@ -19,6 +19,7 @@ from requests.utils import (
     address_in_network,
     dotted_netmask,
     extract_zipped_paths,
+    from_key_val_list,
     get_auth_from_url,
     get_encoding_from_headers,
     get_encodings_from_content,
@@ -169,6 +170,24 @@ class TestGetNetrcAuth:
             f.write("machine example.com login aaaa password bbbb\n")
         auth = get_netrc_auth("http://example.com:@evil.com/&apos;")
         assert auth is None
+
+
+class TestFromKeyValList:
+    @pytest.mark.parametrize(
+        "value, expected",
+        (
+            ([("key", "val")], OrderedDict([("key", "val")])),
+            ((("key", "val"),), OrderedDict([("key", "val")])),
+            ({"key": "val"}, OrderedDict([("key", "val")])),
+            (None, None),
+        ),
+    )
+    def test_valid(self, value, expected):
+        assert from_key_val_list(value) == expected
+
+    def test_invalid(self):
+        with pytest.raises(ValueError):
+            from_key_val_list("string")
 
 
 class TestToKeyValList:
